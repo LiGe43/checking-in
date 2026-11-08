@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: meeting-checkin
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python meeting_checkin.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: meeting-checkin-db
+          property: connectionString
+
+databases:
+  - name: meeting-checkin-db
+    databaseName: meeting_checkin
+    user: meeting_checkin
