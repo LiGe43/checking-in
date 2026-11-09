@@ -145,7 +145,7 @@ def append_entry(entry: dict[str, str]) -> None:
     with psycopg.connect(DATABASE_URL) as connection:
       connection.execute(
         "INSERT INTO checkins (name, checkin_time, display_time) VALUES (%s, %s, %s)",
-        (entry["name"], entry["time"], entry["display_time"]),
+        (entry["name"], datetime.fromisoformat(entry["time"]), entry["display_time"]),
       )
     return
   entries = load_entries()
@@ -206,7 +206,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         current = datetime.now().astimezone()
         entry = {"name": name, "time": current.isoformat(), "display_time": current.strftime("%Y-%m-%d %H:%M:%S")}
-        append_entry(entry)
+        try:
+          append_entry(entry)
+        except Exception as error:
+          print(f"签到写入失败: {error}")
+          self.send_json(500, {"error": "database write failed"})
+          return
         self.send_json(201, entry)
 
     def log_message(self, format: str, *args: object) -> None:
