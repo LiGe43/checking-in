@@ -9,11 +9,13 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 
 PORT = int(os.environ.get("PORT", os.environ.get("CHECKIN_PORT", "5173")))
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DATA_FILE = Path(__file__).with_name("checkins.json")
+DISPLAY_ZONE = ZoneInfo("Asia/Shanghai")
 
 
 PAGE = r'''<!doctype html>
@@ -204,7 +206,7 @@ class Handler(BaseHTTPRequestHandler):
         if not name:
             self.send_json(400, {"error": "name is required"})
             return
-        current = datetime.now().astimezone()
+        current = datetime.now(DISPLAY_ZONE)
         entry = {"name": name, "time": current.isoformat(), "display_time": current.strftime("%Y-%m-%d %H:%M:%S")}
         try:
           append_entry(entry)
