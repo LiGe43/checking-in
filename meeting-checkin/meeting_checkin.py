@@ -127,11 +127,11 @@ def load_entries() -> list[dict[str, str]]:
       for name, checkin_time, display_time in rows
     ]
     if not DATA_FILE.exists():
-        return []
+      return []
     try:
-        return json.loads(DATA_FILE.read_text(encoding="utf-8"))
+      return json.loads(DATA_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return []
+      return []
 
 
 def save_entries(entries: list[dict[str, str]]) -> None:
@@ -210,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
           append_entry(entry)
         except Exception as error:
           print(f"签到写入失败: {error}")
-          self.send_json(500, {"error": f"database write failed: {error}"})
+          self.send_json(500, {"error": "database write failed"})
           return
         self.send_json(201, entry)
 
