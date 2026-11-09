@@ -210,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
           append_entry(entry)
         except Exception as error:
           print(f"签到写入失败: {error}")
-          self.send_json(500, {"error": "database write failed"})
+          self.send_json(500, {"error": f"database write failed: {error}"})
           return
         self.send_json(201, entry)
 
