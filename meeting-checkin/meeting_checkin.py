@@ -144,8 +144,8 @@ def append_entry(entry: dict[str, str]) -> None:
 
     with psycopg.connect(DATABASE_URL) as connection:
       connection.execute(
-        "INSERT INTO checkins (name, checkin_time, display_time) VALUES (%s, %s, %s)",
-        (entry["name"], datetime.fromisoformat(entry["time"]), entry["display_time"]),
+        "INSERT INTO checkins (name, checkin_time, display_time) VALUES (%s, NOW(), %s)",
+        (entry["name"], entry["display_time"]),
       )
     return
   entries = load_entries()
