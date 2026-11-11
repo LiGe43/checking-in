@@ -46,6 +46,7 @@ PAGE = r'''<!doctype html>
     .toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
     button { border:0; border-radius:4px; background:var(--green); color:white; padding:11px 16px; cursor:pointer; font:700 13px Arial,sans-serif; }
     button.secondary { background:transparent; color:var(--green); border:1px solid var(--green); }
+    button.danger { background:transparent; color:#a03c32; border:1px solid #a03c32; }
     table { width:100%; border-collapse:collapse; font:14px Arial,sans-serif; }
     th,td { text-align:left; padding:12px 8px; border-bottom:1px solid var(--line); }
     th { color:var(--muted); font-size:11px; letter-spacing:1px; }
@@ -87,9 +88,10 @@ PAGE = r'''<!doctype html>
     }
 
     async function renderAdmin() {
-      app.innerHTML = `<header><div><div class="eyebrow">MEETING CHECK-IN</div><h1>签到管理</h1></div><div class="date">二维码扫码入口<br>${location.host}</div></header><section class="layout"><div class="panel qr-panel"><div class="eyebrow">SCAN TO CHECK IN</div><div id="qrcode"></div><div class="url">请让参会者扫描此二维码。二维码地址：${location.origin}${location.pathname}#form</div></div><div class="panel"><div class="stats"><div class="stat"><strong id="total">0</strong><span>已签到</span></div><div class="stat"><strong id="today">0</strong><span>今日签到</span></div></div><div class="toolbar"><strong>签到名单</strong><button class="secondary" id="export">导出 CSV</button></div><div id="list"></div></div></section>`;
+      app.innerHTML = `<header><div><div class="eyebrow">MEETING CHECK-IN</div><h1>签到管理</h1></div><div class="date">二维码扫码入口<br>${location.host}</div></header><section class="layout"><div class="panel qr-panel"><div class="eyebrow">SCAN TO CHECK IN</div><div id="qrcode"></div><div class="url">请让参会者扫描此二维码。二维码地址：${location.origin}${location.pathname}#form</div></div><div class="panel"><div class="stats"><div class="stat"><strong id="total">0</strong><span>已签到</span></div><div class="stat"><strong id="today">0</strong><span>今日签到</span></div></div><div class="toolbar"><strong>签到名单</strong><div><button class="secondary" id="export">导出 CSV</button> <button class="danger" id="clear">清除</button></div></div><div id="list"></div></div></section>`;
       new QRCode(document.querySelector('#qrcode'), { text: `${location.origin}${location.pathname}#form`, width:230, height:230, colorDark:'#17211b', colorLight:'#ffffff' });
       document.querySelector('#export').addEventListener('click', exportCsv);
+      document.querySelector('#clear').addEventListener('click', clearEntries);
       await refresh();
       setInterval(refresh, 3000);
     }
@@ -107,6 +109,13 @@ PAGE = r'''<!doctype html>
       const rows = [['姓名','签到时间'], ...(window.entries || []).map(e => [e.name, e.display_time])];
       const csv = '\ufeff' + rows.map(row => row.map(value => `"${String(value).replaceAll('"','""')}"`).join(',')).join('\n');
       const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); link.download = '会议签到.csv'; link.click(); URL.revokeObjectURL(link.href);
+    }
+
+    async function clearEntries() {
+      if (!window.entries?.length || !confirm('确定清除全部签到记录吗？此操作不可撤销。')) return;
+      const response = await fetch(endpoint, { method:'DELETE' });
+      if (response.ok) await refresh();
+      else alert('清除失败，请稍后重试');
     }
 
     function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
@@ -128,12 +137,12 @@ def load_entries() -> list[dict[str, str]]:
       {"name": name, "time": checkin_time.isoformat(), "display_time": display_time}
       for name, checkin_time, display_time in rows
     ]
-    if not DATA_FILE.exists():
-      return []
-    try:
-      return json.loads(DATA_FILE.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-      return []
+  if not DATA_FILE.exists():
+    return []
+  try:
+    return json.loads(DATA_FILE.read_text(encoding="utf-8"))
+  except (OSError, json.JSONDecodeError):
+    return []
 
 
 def save_entries(entries: list[dict[str, str]]) -> None:
@@ -153,6 +162,16 @@ def append_entry(entry: dict[str, str]) -> None:
   entries = load_entries()
   entries.append(entry)
   save_entries(entries)
+
+
+def clear_entries() -> None:
+  if DATABASE_URL:
+    import psycopg
+
+    with psycopg.connect(DATABASE_URL) as connection:
+      connection.execute("DELETE FROM checkins")
+    return
+  save_entries([])
 
 
 def ensure_database() -> None:
@@ -215,6 +234,18 @@ class Handler(BaseHTTPRequestHandler):
           self.send_json(500, {"error": "database write failed"})
           return
         self.send_json(201, entry)
+
+    def do_DELETE(self) -> None:
+        if urlparse(self.path).path != "/api/checkins":
+            self.send_json(404, {"error": "not found"})
+            return
+        try:
+            clear_entries()
+        except Exception as error:
+            print(f"清除签到失败: {error}")
+            self.send_json(500, {"error": "database delete failed"})
+            return
+        self.send_json(200, {"cleared": True})
 
     def log_message(self, format: str, *args: object) -> None:
         print(f"[{datetime.now():%H:%M:%S}] {format % args}")
