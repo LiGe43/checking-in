@@ -9,13 +9,11 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
-from zoneinfo import ZoneInfo
 
 
 PORT = int(os.environ.get("PORT", os.environ.get("CHECKIN_PORT", "5173")))
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DATA_FILE = Path(__file__).with_name("checkins.json")
-DISPLAY_ZONE = ZoneInfo("Asia/Shanghai")
 
 
 PAGE = r'''<!doctype html>
@@ -129,11 +127,11 @@ def load_entries() -> list[dict[str, str]]:
       for name, checkin_time, display_time in rows
     ]
     if not DATA_FILE.exists():
-      return []
+        return []
     try:
-      return json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        return json.loads(DATA_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-      return []
+        return []
 
 
 def save_entries(entries: list[dict[str, str]]) -> None:
@@ -146,8 +144,8 @@ def append_entry(entry: dict[str, str]) -> None:
 
     with psycopg.connect(DATABASE_URL) as connection:
       connection.execute(
-        "INSERT INTO checkins (name, checkin_time, display_time) VALUES (%s, NOW(), %s)",
-        (entry["name"], entry["display_time"]),
+        "INSERT INTO checkins (name, checkin_time, display_time) VALUES (%s, %s, %s)",
+        (entry["name"], datetime.fromisoformat(entry["time"]), entry["display_time"]),
       )
     return
   entries = load_entries()
@@ -206,7 +204,7 @@ class Handler(BaseHTTPRequestHandler):
         if not name:
             self.send_json(400, {"error": "name is required"})
             return
-        current = datetime.now(DISPLAY_ZONE)
+        current = datetime.now().astimezone()
         entry = {"name": name, "time": current.isoformat(), "display_time": current.strftime("%Y-%m-%d %H:%M:%S")}
         try:
           append_entry(entry)
