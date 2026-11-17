@@ -17,7 +17,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 DATA_FILE = Path(__file__).with_name("checkins.json")
 DISPLAY_ZONE = ZoneInfo("Asia/Shanghai")
 VERIFY_PATH = "/7461e51cc04612a45a5c5d0bc3e02ccd.txt"
-VERIFY_CONTENT = "ff6c3a11a923540c82bd7de4c7341d3c76b9e80"
+VERIFY_CONTENT = "ff6c3a11a923540c82bd7de4c7341d3c76b9ee80"
 
 
 PAGE = r'''<!doctype html>
