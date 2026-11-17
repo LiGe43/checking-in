@@ -205,14 +205,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
-      if path == VERIFY_PATH:
-        payload = VERIFY_CONTENT.encode("ascii")
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.send_header("Content-Length", str(len(payload)))
-        self.end_headers()
-        self.wfile.write(payload)
-        return
+        if path == VERIFY_PATH:
+            payload = VERIFY_CONTENT.encode("ascii")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         if path == "/api/checkins":
             self.send_json(200, load_entries())
             return
