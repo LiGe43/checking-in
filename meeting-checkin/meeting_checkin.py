@@ -16,6 +16,8 @@ PORT = int(os.environ.get("PORT", os.environ.get("CHECKIN_PORT", "5173")))
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DATA_FILE = Path(__file__).with_name("checkins.json")
 DISPLAY_ZONE = ZoneInfo("Asia/Shanghai")
+VERIFY_PATH = "/7461e51cc04612a45a5c5d0bc3e02ccd.txt"
+VERIFY_CONTENT = "ff6c3a11a923540c82bd7de4c7341d3c76b9e80"
 
 
 PAGE = r'''<!doctype html>
@@ -203,6 +205,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+      if path == VERIFY_PATH:
+        payload = VERIFY_CONTENT.encode("ascii")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+        return
         if path == "/api/checkins":
             self.send_json(200, load_entries())
             return
